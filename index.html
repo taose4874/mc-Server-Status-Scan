@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC服务器状态检测</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --secondary: #F44336;
+            --secondary-dark: #D32F2F;
+            --text: #333;
+            --text-light: #666;
+            --bg: #f5f7fa;
+            --card-bg: #fff;
+            --border: #e0e0e0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.5;
+            color: var(--text);
+            background-color: var(--bg);
+            padding: 15px;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        h1 {
+            color: var(--text);
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 500;
+            font-size: 20px;
+        }
+        
+        .input-area {
+            margin-bottom: 15px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            resize: vertical;
+            font-family: monospace;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .stats-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            border-radius: 6px;
+            background: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .stat-card.online  {
+            border-top: 2px solid var(--primary);
+        }
+        
+        .stat-card.offline  {
+            border-top: 2px solid var(--secondary);
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 500;
+            margin: 5px 0;
+        }
+        
+        .stat-value.online  {
+            color: var(--primary);
+        }
+        
+        .stat-value.offline  {
+            color: var(--secondary);
+        }
+        
+        .stat-label {
+            color: var(--text-light);
+            font-size: 12px;
+        }
+        
+        .server-list {
+            margin-top: 15px;
+        }
+        
+        .server-card {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: var(--card-bg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            font-size: 13px;
+        }
+        
+        .server-card.online  {
+            border-left: 3px solid var(--primary);
+        }
+        
+        .server-card.offline  {
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .server-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .server-name {
+            font-weight: 500;
+            color: var(--text);
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .server-status {
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .server-status.online  {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--primary);
+        }
+        
+        .server-status.offline  {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--secondary);
+        }
+        
+        .server-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            color: var(--text-light);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .motd {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.03);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-top: 8px;
+            white-space: pre-wrap;
+            color: var(--text);
+            border-left: 2px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .players-list {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .player-tag {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        
+        .copy-notification {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: var(--primary);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-30px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+            font-size: 13px;
+        }
+        
+        .copy-notification.show  {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .stat-card {
+                min-width: calc(50% - 5px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MC服务器状态检测</h1>
+        
+        <div class="input-area">
+            <textarea id="serverList" placeholder="输入服务器地址，每行一个（例如：mc.hypixel.net ）"></textarea>
+            
+            <div class="button-group">
+                <button id="checkBtn" class="btn btn-primary">
+                    <span>开始检测</span>
+                </button>
+                <button id="clearBtn" class="btn btn-danger">
+                    <span>清空列表</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="stats" class="stats-container" style="display:none;">
+            <div class="stat-card online">
+                <div class="stat-value online" id="online-count">0</div>
+                <div class="stat-label">在线服务器</div>
+                <button id="copyOnlineBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%; padding: 5px;">
+                    <span>复制在线</span>
+                </button>
+            </div>
+            <div class="stat-card offline">
+                <div class="stat-value offline" id="offline-count">0</div>
+                <div class="stat-label">离线服务器</div>
+                <button id="copyOfflineBtn" class="btn btn-secondary" style="margin-top: 8px; width: 100%; padding: 5px;">
+                    <span>复制离线</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="result" class="server-list">
+            <div class="empty-state">
+                <p>输入服务器地址并点击"开始检测"</p>
+            </div>
+        </div>
+    </div>
+ 
+    <div id="copyNotification" class="copy-notification">已复制到剪贴板</div>
+ 
+    <script>
+        document.addEventListener('DOMContentLoaded',  function() {
+            const checkBtn = document.getElementById('checkBtn'); 
+            const clearBtn = document.getElementById('clearBtn'); 
+            const serverList = document.getElementById('serverList'); 
+            const resultDiv = document.getElementById('result'); 
+            const statsContainer = document.getElementById('stats'); 
+            const onlineCount = document.getElementById('online-count'); 
+            const offlineCount = document.getElementById('offline-count'); 
+            const copyOnlineBtn = document.getElementById('copyOnlineBtn'); 
+            const copyOfflineBtn = document.getElementById('copyOfflineBtn'); 
+            const copyNotification = document.getElementById('copyNotification'); 
+            
+            let currentResults = [];
+            
+            // 事件监听 
+            checkBtn.addEventListener('click',  checkServers);
+            clearBtn.addEventListener('click',  clearServerList);
+            copyOnlineBtn.addEventListener('click',  () => copyServerList(true));
+            copyOfflineBtn.addEventListener('click',  () => copyServerList(false));
+            
+            // 主检测函数
+            async function checkServers() {
+                const servers = getServerList();
+                if (servers.length  === 0) {
+                    showMessage('请输入至少一个服务器地址');
+                    return;
+                }
+                
+                checkBtn.disabled  = true;
+                checkBtn.innerHTML  = '<span>检测中...</span>';
+                resultDiv.innerHTML  = '<div class="server-card">正在检测中，请稍候...</div>';
+                
+                try {
+                    const response = await fetch('check.php',  {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({  servers: servers })
+                    });
+                    
+                    if (!response.ok)  {
+                        throw new Error(`请求失败: ${response.status}`); 
+                    }
+                    
+                    const result = await response.json(); 
+                    
+                    if (result.status  !== 'success') {
+                        throw new Error(result.message  || '检测失败');
+                    }
+                    
+                    if (!Array.isArray(result.data))  {
+                        throw new Error('服务器返回了无效的数据格式');
+                    }
+                    
+                    currentResults = result.data; 
+                    renderResults(currentResults);
+                    
+                } catch (error) {
+                    console.error(' 检测过程中出错:', error);
+                    showError(error.message); 
+                } finally {
+                    checkBtn.disabled  = false;
+                    checkBtn.innerHTML  = '<span>开始检测</span>';
+                }
+            }
+            
+            // 渲染结果
+            function renderResults(data) {
+                const safeData = Array.isArray(data)  ? data : [];
+                const onlineServers = safeData.filter(s  => s.online); 
+                const offlineServers = safeData.filter(s  => !s.online); 
+                
+                onlineCount.textContent  = onlineServers.length; 
+                offlineCount.textContent  = offlineServers.length; 
+                statsContainer.style.display  = 'flex';
+                
+                if (safeData.length  === 0) {
+                    resultDiv.innerHTML  = '<div class="server-card">没有检测到有效的服务器数据</div>';
+                    return;
+                }
+                
+                // 按在线状态排序 
+                safeData.sort((a,  b) => (b.online  || false) - (a.online  || false));
+                
+                let html = '';
+                safeData.forEach(server  => {
+                    const isOnline = server.online  === true;
+                    const address = formatAddress(server.server); 
+                    
+                    html += `
+                        <div class="server-card ${isOnline ? 'online' : 'offline'}">
+                            <div class="server-header">
+                                <div class="server-name" title="${address}">${address}</div>
+                                <div class="server-status ${isOnline ? 'online' : 'offline'}">
+                                    ${isOnline ? '在线' : '离线'}
+                                </div>
+                            </div>
+                            ${isOnline ? renderOnlineDetails(server) : renderOfflineDetails(server)}
+                        </div>
+                    `;
+                });
+                
+                resultDiv.innerHTML  = html;
+            }
+            
+            // 渲染在线服务器详情 
+            function renderOnlineDetails(server) {
+                const players = server.players?.list  || [];
+                const motd = server.motd  ? server.motd.replace(/§[0-9a-fk-or]/g,  '') : '';
+                
+                return `
+                    <div class="server-details">
+                        <div class="detail-item">
+                            <span>延迟: ${server.ping  || 0}ms</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>版本: ${server.version  || '未知'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span>玩家: ${server.players?.online  || 0}/${server.players?.max  || 0}</span>
+                        </div>
+                    </div>
+                    ${motd ? `<div class="motd">${motd}</div>` : ''}
+                    ${players.length  > 0 ? `
+                        <div class="players-list">
+                            ${players.slice(0,  20).map(player => `
+                                <span class="player-tag">${player}</span>
+                            `).join('')}
+                            ${players.length  > 20 ? `<span class="player-tag">+${players.length  - 20}更多</span>` : ''}
+                        </div>
+                    ` : ''}
+                `;
+            }
+            
+            // 渲染离线服务器详情
+            function renderOfflineDetails(server) {
+                return `
+                    <div class="server-details">
+                        <div class="detail-item">
+                            <span>错误: ${server.error  || '未知错误'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 复制服务器列表（修复版）
+            function copyServerList(onlineOnly) {
+                try {
+                    const servers = currentResults 
+                        .filter(s => onlineOnly ? s.online  : !s.online) 
+                        .map(s => formatAddress(s.server)); 
+                    
+                    if (servers.length  === 0) {
+                        showNotification(onlineOnly ? '没有在线的服务器可复制' : '没有离线的服务器可复制');
+                        return;
+                    }
+                    
+                    // 创建临时textarea元素
+                    const textarea = document.createElement('textarea'); 
+                    textarea.value  = servers.join('\n'); 
+                    document.body.appendChild(textarea); 
+                    textarea.select(); 
+                    
+                    // 执行复制命令 
+                    const success = document.execCommand('copy'); 
+                    document.body.removeChild(textarea); 
+                    
+                    if (success) {
+                        showNotification('已复制到剪贴板');
+                    } else {
+                        showNotification('复制失败，请手动选择');
+                    }
+                } catch (error) {
+                    console.error(' 复制失败:', error);
+                    showNotification('复制失败，请手动选择');
+                }
+            }
+            
+            // 显示通知
+            function showNotification(message) {
+                copyNotification.textContent  = message;
+                copyNotification.classList.add('show'); 
+                
+                setTimeout(() => {
+                    copyNotification.classList.remove('show'); 
+                }, 2000);
+            }
+            
+            // 清空列表 
+            function clearServerList() {
+                serverList.value  = '';
+                resultDiv.innerHTML  = '<div class="empty-state"><p>输入服务器地址并点击"开始检测"</p></div>';
+                statsContainer.style.display  = 'none';
+                currentResults = [];
+            }
+            
+            // 获取服务器列表
+            function getServerList() {
+                return serverList.value.trim().split('\n') 
+                    .map(s => s.trim()) 
+                    .filter(s => s.length  > 0);
+            }
+            
+            // 格式化地址
+            function formatAddress(address) {
+                return address.replace(/:25565$/,  '');
+            }
+            
+            // 显示错误
+            function showError(msg) {
+                resultDiv.innerHTML  = `
+                    <div class="server-card offline">
+                        <div class="server-header">
+                            <div class="server-name">错误</div>
+                        </div>
+                        <div class="server-details">
+                            ${msg}
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
